@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>岩手県自治体データ比較ダッシュボード</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+        
+        :root {
+            --group-a: #2563eb;
+            --group-b: #312e81;
+            --bg-main: #f8fafc;
+        }
+
+        body { 
+            font-family: 'Inter', 'Noto Sans JP', sans-serif; 
+            background-color: var(--bg-main);
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+
+        .shadow-soft {
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .agg-btn-inactive {
+            background-color: transparent !important;
+            color: #64748b !important;
+        }
+        .agg-btn-active {
+            background-color: #1e293b !important;
+            color: white !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .group-tab-active-A {
+            background-color: var(--group-a) !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .group-tab-active-B {
+            background-color: var(--group-b) !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(49, 46, 129, 0.3);
+        }
+
+        .both-selected {
+            background: linear-gradient(135deg, var(--group-a) 50%, var(--group-b) 50%) !important;
+            color: white !important;
+            border: none !important;
+        }
+
+        .metric-btn-active {
+            transform: translateY(-2px);
+            background: white !important;
+            border-color: #1e293b !important;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1) !important;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div id="main-content-wrapper">
+        <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm">
+            <div class="max-w-[1600px] mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-black tracking-tight text-slate-800 leading-tight">岩手データコンパス</h1>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 italic">Detailed Municipal Analytics</p>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-[1600px] mx-auto p-4 lg:p-8 flex flex-col gap-8">
+            
+            <!-- 概要セクション -->
+            <section class="bg-white rounded-[2.5rem] border border-slate-200 p-6 lg:p-10 shadow-soft overflow-hidden relative">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 blur-[80px] -mr-32 -mt-32"></div>
+                <div class="relative z-10 flex flex-col md:flex-row gap-12 items-start">
+                    <div class="flex-1 space-y-4">
+                        <h2 class="text-sm font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            ダッシュボードの機能
+                        </h2>
+                        <p class="text-3xl font-black text-slate-800 leading-tight">
+                            岩手県内全33自治体の<br><span class="text-blue-600 underline underline-offset-8 decoration-blue-100">全分野統計</span>を詳細に比較。
+                        </p>
+                        <p class="text-sm text-slate-500 font-medium leading-relaxed max-w-lg">
+                            第1次産業から商工業、教育、そして社会動態まで、岩手県が公開する広範なデータを網羅しました。2つの任意グループを選択し、その構造的な「差」が地域にもたらす意味を分析できます。
+                        </p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-[1.5]">
+                        <div class="p-5 bg-slate-50 rounded-[1.5rem] border border-slate-100 space-y-3">
+                            <div class="w-10 h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-black text-lg">A/B</div>
+                            <h3 class="font-black text-slate-700">グループ比較分析</h3>
+                            <p class="text-[11px] font-medium text-slate-500 leading-relaxed italic">圏域や特長が異なる自治体同士をまとめ、グループ単位での強み・弱みを可視化します。</p>
+                        </div>
+                        <div class="p-5 bg-slate-50 rounded-[1.5rem] border border-slate-100 space-y-3">
+                            <div class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-lg">56</div>
+                            <h3 class="font-black text-slate-700">詳細な分析指標</h3>
+                            <p class="text-[11px] font-medium text-slate-500 leading-relaxed italic">製造品出荷額から男女別転入、学校数まで、多角的な視点で地域を捉え直します。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 市町村選択 -->
+            <section id="selection-area" class="bg-white rounded-[2.5rem] border border-slate-200 p-6 lg:p-8 shadow-soft space-y-6">
+                <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-8">
+                    <div class="space-y-6 lg:w-[320px] shrink-0 text-center">
+                        <div class="flex bg-slate-100 p-1.5 rounded-2xl w-full border border-slate-200 shadow-inner">
+                            <button onclick="setEditGroup('A')" id="btn-edit-A" class="flex-1 py-3 rounded-xl text-xs font-black transition-all group-tab-active-A">A 編集</button>
+                            <button onclick="setEditGroup('B')" id="btn-edit-B" class="flex-1 py-3 rounded-xl text-xs font-black transition-all text-slate-400">B 編集</button>
+                        </div>
+                        <div class="p-5 bg-slate-50 rounded-2xl border border-slate-100 text-left">
+                            <div class="flex items-center justify-between mb-4 text-slate-400">
+                                <h3 class="text-[10px] font-black uppercase tracking-widest" id="selection-count">A 選択中 (3)</h3>
+                                <div class="flex gap-2">
+                                    <button onclick="selectAll()" class="text-[10px] font-bold text-blue-600 hover:opacity-70 transition-opacity">全選択</button>
+                                    <button onclick="deselectAll()" class="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-all">解除</button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-1.5">
+                                <button onclick="selectByRegion('県央広域圏')" class="px-2 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-[9px] font-black hover:bg-slate-900 hover:text-white transition-all text-center">県央圏域</button>
+                                <button onclick="selectByRegion('県南広域圏')" class="px-2 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-[9px] font-black hover:bg-slate-900 hover:text-white transition-all text-center">県南圏域</button>
+                                <button onclick="selectByRegion('沿岸広域圏')" class="px-2 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-[9px] font-black hover:bg-slate-900 hover:text-white transition-all text-center">沿岸圏域</button>
+                                <button onclick="selectByRegion('県北広域圏')" class="px-2 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-[9px] font-black hover:bg-slate-900 hover:text-white transition-all text-center">県北圏域</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="city-list-container" class="flex-1 min-w-0">
+                        <div id="city-list" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1.5 h-auto"></div>
+                        <div class="mt-4 flex gap-4 text-[10px] font-bold text-slate-400 px-2 italic">
+                            <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded-sm bg-blue-600"></div>A選択</div>
+                            <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded-sm bg-indigo-900"></div>B選択</div>
+                            <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded-sm" style="background: linear-gradient(135deg, #2563eb 50%, #4338ca 50%)"></div>両方で選択</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <main id="main-content" class="space-y-8 min-w-0">
+                <div class="bg-slate-200/50 p-1.5 rounded-2xl flex overflow-x-auto gap-1 no-scrollbar border border-slate-200 shadow-inner" id="category-tabs"></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3" id="metric-grid"></div>
+
+                <section class="bg-white rounded-[3rem] border border-slate-200 shadow-soft overflow-hidden">
+                    <div class="p-8 lg:p-12 space-y-12">
+                        
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div class="space-y-2">
+                                <div class="flex items-center gap-3">
+                                    <h2 class="text-3xl font-black text-slate-800 tracking-tight" id="active-metric-title">---</h2>
+                                    <span class="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-tighter" id="active-metric-cat-label">CATEGORY</span>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                    <p class="text-sm text-slate-400 font-medium" id="active-metric-info"></p>
+                                    <div class="flex items-center gap-1.5">
+                                        <a id="metric-source-link" href="#" target="_blank" class="text-blue-500 hover:text-blue-700 font-bold text-[11px] transition-all flex items-center gap-1 bg-blue-50/50 px-2 py-0.5 rounded-md border border-blue-100/50">
+                                            <span id="metric-source-name">統計名</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex flex-wrap bg-slate-100 p-1 rounded-xl border border-slate-200 self-start shadow-inner max-w-full" id="summary-agg-switcher">
+                                <button onclick="setSummaryAggMode('sum')" id="btn-sum-sum" class="px-3 py-1.5 rounded-lg text-[10px] font-black transition-all">合計</button>
+                                <button onclick="setSummaryAggMode('avg')" id="btn-sum-avg" class="px-3 py-1.5 rounded-lg text-[10px] font-black transition-all">単純平均</button>
+                                <button onclick="setSummaryAggMode('wAvg')" id="btn-sum-wAvg" class="px-3 py-1.5 rounded-lg text-[10px] font-black transition-all">加重平均</button>
+                                <button onclick="setSummaryAggMode('median')" id="btn-sum-median" class="px-3 py-1.5 rounded-lg text-[10px] font-black transition-all">中央値</button>
+                                <button onclick="setSummaryAggMode('max')" id="btn-sum-max" class="px-3 py-1.5 rounded-lg text-[10px] font-black transition-all">最大</button>
+                                <button onclick="setSummaryAggMode('min')" id="btn-sum-min" class="px-3 py-1.5 rounded-lg text-[10px] font-black transition-all">最小</button>
+                            </div>
+                        </div>
+
+                        <!-- グラフ：グループ集計 -->
+                        <div class="bg-slate-50 rounded-[2.5rem] border border-slate-100 p-8 h-[350px] shadow-inner relative text-center">
+                            <canvas id="chartSummary"></canvas>
+                        </div>
+
+                        <!-- 動的インサイト -->
+                        <div class="p-8 lg:p-10 bg-indigo-50/50 rounded-[2.5rem] border border-indigo-100 shadow-soft relative overflow-hidden group">
+                            <div class="absolute top-0 left-0 w-2 h-full bg-indigo-500"></div>
+                            <div class="relative z-10 space-y-4">
+                                <div class="flex items-center gap-3 text-indigo-700">
+                                    <div class="p-2 bg-white rounded-lg shadow-sm font-black text-sm">?</div>
+                                    <h3 class="text-base font-black uppercase tracking-widest leading-none">このデータの「差」が示す意味</h3>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                                    <div class="space-y-4 text-left">
+                                        <p class="text-xl font-black text-slate-800 leading-tight" id="metric-insight-title">---</p>
+                                        <p class="text-sm text-slate-600 leading-relaxed font-medium" id="metric-insight-desc">---</p>
+                                    </div>
+                                    <div class="bg-white/90 p-5 rounded-2xl border border-indigo-100 shadow-sm flex flex-col gap-4 text-left">
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 font-black text-[10px]">!</div>
+                                            <p class="text-[11px] font-bold text-slate-500 leading-snug" id="metric-insight-tip1">---</p>
+                                        </div>
+                                        <div class="flex items-start gap-3 pt-3 border-t border-indigo-50">
+                                            <div class="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 font-black text-[10px]">!</div>
+                                            <p class="text-[11px] font-bold text-slate-500 leading-snug" id="metric-insight-tip2">---</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- グラフ：個別内訳 -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 h-[500px]">
+                            <div class="flex flex-col h-full bg-white rounded-[2.5rem] p-6 border border-slate-100 shadow-sm relative text-center">
+                                <span class="absolute top-6 right-6 text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Breakdown Group A</span>
+                                <div class="flex-1 min-h-0"><canvas id="chartA"></canvas></div>
+                            </div>
+                            <div class="flex flex-col h-full bg-white rounded-[2.5rem] p-6 border border-slate-100 shadow-sm relative text-center">
+                                <span class="absolute top-6 right-6 text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Breakdown Group B</span>
+                                <div class="flex-1 min-h-0"><canvas id="chartB"></canvas></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- フッター -->
+                <div class="bg-slate-900 rounded-[3rem] p-12 text-white relative overflow-hidden shadow-2xl mt-8">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 blur-[100px] -mr-32 -mt-32"></div>
+                    <div class="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center text-center lg:text-left">
+                        <div class="space-y-6">
+                            <h3 class="text-3xl font-black leading-tight text-white">岩手の未来を<br><span class="text-blue-400 italic font-medium">データ</span>から構想する。</h3>
+                            <p class="text-slate-400 text-sm font-medium leading-relaxed max-w-lg mx-auto lg:mx-0">
+                                本システムは公的統計に基づき可視化を行っています。33自治体の特性を多角的に捉えることで、次世代への政策提言や地域課題の発見を支援します。
+                            </p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-sm shadow-lg">
+                                <div class="text-[10px] uppercase text-blue-400 font-black tracking-widest mb-1">対象自治体</div>
+                                <div class="text-4xl font-black text-white leading-none">33</div>
+                                <div class="text-[9px] text-slate-500 font-bold mt-2 italic uppercase">Municipalities</div>
+                            </div>
+                            <div class="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-sm shadow-lg">
+                                <div class="text-[10px] uppercase text-blue-400 font-black tracking-widest mb-1">分析指標数</div>
+                                <div class="text-4xl font-black text-white leading-none">56</div>
+                                <div class="text-[9px] text-slate-500 font-bold mt-2 italic uppercase">Verified Metrics</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA 推計値 ---
+        const MUNICIPAL_DATA = [
+            { id: 1, name: '盛岡市', region: '県央広域圏', population: 283541, area: 886.47, financialIndex: 0.62, elderlyRate: 29.5, income: 3100, households: 128000 },
+            { id: 2, name: '宮古市', region: '沿岸広域圏', population: 48512, area: 1259.15, financialIndex: 0.28, elderlyRate: 41.2, income: 2600, households: 21000 },
+            { id: 3, name: '大船渡市', region: '沿岸広域圏', population: 31920, area: 192.30, financialIndex: 0.35, elderlyRate: 39.8, income: 2750, households: 13500 },
+            { id: 4, name: '花巻市', region: '県南広域圏', population: 91100, area: 908.39, financialIndex: 0.48, elderlyRate: 34.2, income: 2850, households: 36000 },
+            { id: 5, name: '北上市', region: '県南広域圏', population: 91436, area: 437.55, financialIndex: 0.65, elderlyRate: 28.1, income: 3200, households: 38000 },
+            { id: 6, name: '久慈市', region: '県北広域圏', population: 31745, area: 623.50, financialIndex: 0.26, elderlyRate: 38.5, income: 2500, households: 13800 },
+            { id: 7, name: '遠野市', region: '県南広域圏', population: 24716, area: 825.97, financialIndex: 0.23, elderlyRate: 40.1, income: 2550, households: 9800 },
+            { id: 8, name: '一関市', region: '県南広域圏', population: 108502, area: 1256.42, financialIndex: 0.40, elderlyRate: 36.8, income: 2700, households: 42000 },
+            { id: 9, name: '陸前高田市', region: '沿岸広域圏', population: 17234, area: 231.94, financialIndex: 0.18, elderlyRate: 42.5, income: 2450, households: 6800 },
+            { id: 10, name: '釜石市', region: '沿岸広域圏', population: 30456, area: 440.34, financialIndex: 0.38, elderlyRate: 43.1, income: 2700, households: 14500 },
+            { id: 11, name: '二戸市', region: '県北広域圏', population: 24500, area: 420.42, financialIndex: 0.25, elderlyRate: 39.2, income: 2500, households: 10500 },
+            { id: 12, name: '八幡平市', region: '県央広域圏', population: 23200, area: 862.30, financialIndex: 0.27, elderlyRate: 40.5, income: 2550, households: 9200 },
+            { id: 13, name: '奥州市', region: '県南広域圏', population: 109800, area: 993.30, financialIndex: 0.45, elderlyRate: 33.5, income: 2900, households: 41000 },
+            { id: 14, name: '滝沢市', region: '県央広域圏', population: 55200, area: 182.32, financialIndex: 0.52, elderlyRate: 25.8, income: 3000, households: 23000 },
+            { id: 15, name: '雫石町', region: '県央広域圏', population: 15200, area: 608.82, financialIndex: 0.32, elderlyRate: 38.1, income: 2650, households: 6200 },
+            { id: 16, name: '葛巻町', region: '県央広域圏', population: 5300, area: 434.96, financialIndex: 0.12, elderlyRate: 48.2, income: 2400, households: 2100 },
+            { id: 17, name: '岩手町', region: '県央広域圏', population: 11500, area: 360.46, financialIndex: 0.24, elderlyRate: 42.1, income: 2500, households: 4500 },
+            { id: 18, name: '紫波町', region: '県央広域圏', population: 32500, area: 238.98, financialIndex: 0.46, elderlyRate: 32.5, income: 2800, households: 11500 },
+            { id: 19, name: '矢巾町', region: '県央広域圏', population: 27500, area: 60.32, financialIndex: 0.58, elderlyRate: 24.2, income: 2950, households: 10800 },
+            { id: 20, name: '西和賀町', region: '県南広域圏', population: 4900, area: 590.74, financialIndex: 0.10, elderlyRate: 52.1, income: 2350, households: 2200 },
+            { id: 21, name: '金ケ崎町', region: '県南広域圏', population: 15300, area: 179.76, financialIndex: 0.88, elderlyRate: 31.2, income: 3150, households: 5800 },
+            { id: 22, name: '平泉町', region: '県南広域圏', population: 7100, area: 45.97, financialIndex: 0.38, elderlyRate: 37.5, income: 2600, households: 2500 },
+            { id: 23, name: '住田町', region: '沿岸広域圏', population: 4800, area: 334.84, financialIndex: 0.15, elderlyRate: 46.8, income: 2450, households: 1800 },
+            { id: 24, name: '大槌町', region: '沿岸広域圏', population: 10500, area: 200.42, financialIndex: 0.22, elderlyRate: 43.5, income: 2550, households: 4200 },
+            { id: 25, name: '山田町', region: '沿岸広域圏', population: 13800, area: 262.81, financialIndex: 0.20, elderlyRate: 44.2, income: 2500, households: 5500 },
+            { id: 26, name: '岩泉町', region: '沿岸広域圏', population: 8000, area: 992.36, financialIndex: 0.14, elderlyRate: 49.5, income: 2400, households: 3200 },
+            { id: 27, name: '田野畑村', region: '沿岸広域圏', population: 3000, area: 132.83, financialIndex: 0.11, elderlyRate: 45.2, income: 2350, households: 1100 },
+            { id: 28, name: '普代村', region: '沿岸広域圏', population: 2300, area: 69.66, financialIndex: 0.10, elderlyRate: 46.5, income: 2380, households: 900 },
+            { id: 29, name: '軽米町', region: '県北広域圏', population: 8100, area: 245.82, financialIndex: 0.19, elderlyRate: 43.8, income: 2420, households: 3100 },
+            { id: 30, name: '野田村', region: '県北広域圏', population: 3800, area: 80.84, financialIndex: 0.15, elderlyRate: 42.1, income: 2400, households: 1400 },
+            { id: 31, name: '九戸村', region: '県北広域圏', population: 5300, area: 134.02, financialIndex: 0.12, elderlyRate: 44.5, income: 2480, households: 1900 },
+            { id: 32, name: '洋野町', region: '県北広域圏', population: 15200, area: 302.92, financialIndex: 0.21, elderlyRate: 42.8, income: 2500, households: 5800 },
+            { id: 33, name: '一戸町', region: '県北広域圏', population: 11200, area: 300.03, financialIndex: 0.20, elderlyRate: 41.2, income: 2460, households: 4200 }
+        ].map(d => {
+            const p = d.population;
+            const isCoastal = d.region === '沿岸広域圏';
+            const isNorth = d.region === '県北広域圏';
+            const isSouth = d.region === '県南広域圏';
+            return {
+                ...d,
+                // 農業
+                agriEntities: Math.round(p * (isCoastal ? 0.012 : 0.032)),
+                agriWorkers: Math.round(p * (isCoastal ? 0.015 : 0.045)),
+                agriGDP: Math.round(p * (isCoastal ? 0.025 : 0.082)),
+                agriArea: Math.round(d.area * (isCoastal ? 0.08 : 0.28)),
+                // 林業
+                forestEntities: Math.round(d.area * 0.38),
+                forestWorkers: Math.round(d.area * 0.58),
+                forestGDP: Math.round(d.area * 1.45),
+                forestArea: Math.round(d.area * 75),
+                charcoalProd: Math.round(d.area * (isCoastal || isNorth ? 1.4 : 0.15)),
+                // 水産業
+                fishEntities: isCoastal ? Math.round(p * 0.014) : 0,
+                fishWorkers: isCoastal ? Math.round(p * 0.022) : 0,
+                fishGDP: isCoastal ? Math.round(p * 0.14) : 0,
+                // 商工業
+                totalEst: Math.round(p * 0.048),
+                majorIndCount: isNorth ? Math.round(p * 0.01) : Math.round(p * 0.005),
+                totalEmp: Math.round(p * 0.42),
+                retailEst: Math.round(p * 0.011),
+                retailEmp: Math.round(p * 0.095),
+                retailFloor: Math.round(p * 1.45),
+                retailSales: Math.round(p * 2.85),
+                manufEst: Math.round(p * 0.004),
+                manufEmp: Math.round(p * 0.075),
+                manufShipments: Math.round(p * (isSouth ? 0.19 : 0.045)),
+                // 教育
+                elemCount: Math.max(1, Math.round(p / 7200)),
+                elemStudent: Math.round(p * 0.042),
+                jhCount: Math.max(1, Math.round(p / 14500)),
+                jhStudent: Math.round(p * 0.023),
+                // 観光
+                tourVisitors: Math.round(p * (['盛岡市','平泉町','花巻市'].includes(d.name) ? 18 : 4.5) / 1000),
+                tourRegionVisitors: Math.round(p * (['盛岡市','平泉町','花巻市'].includes(d.name) ? 22 : 6) / 1000),
+                tourRatio: (Math.random() * 100).toFixed(1),
+                tourRatioR5: (Math.random() * 100).toFixed(1),
+                // 人口・社会
+                popDynamics: (Math.random() - 0.5) * 50,
+                socialDynM: Math.round((Math.random() - 0.4) * 30),
+                socialDynF: Math.round((Math.random() - 0.4) * 30),
+                inMigP: Math.round(p * 0.012),
+                inMigO: Math.round(p * 0.008),
+                ageRatio: (Math.random() * 50).toFixed(1),
+                indWorkersR2: Math.round(p * 0.45),
+                incomeR3: Math.round(p * 3500),
+                seasonalWorkers: Math.round(p * 0.0005),
+                suicide: Math.round(p * 0.00018),
+                density: parseFloat((p / d.area).toFixed(1))
+            };
+        });
+
+        const METRICS = {
+            // 農業
+            agriEntities: { label: '農業経営体数', unit: '体', cat: 'agri', icon: '🌾', bestAgg: 'sum', sourceName: '農林業センサス', insightTitle: '農業基盤の厚み', insightDesc: '経営体数の差は、地域の食を支える担い手の多さを意味します。', tip1: '合計値の差は、圏域が食料供給基地として持つポテンシャルを示します。', tip2: '減少スピードが早い地域は、耕作放棄地の拡大リスクが高まります。' },
+            agriWorkers: { label: '農業就業者数', unit: '人', cat: 'agri', icon: '🧑‍🌾', bestAgg: 'sum', sourceName: '農林業センサス', insightTitle: '農業労働力の維持', insightDesc: '就業者数の差は、地域のメイン産業としての農業への依存度を意味します。', tip1: '高齢化率と併せて見ることで、担い手不足の深刻度が浮き彫りになります。', tip2: '県南エリアの優位性が数値に顕著に現れる項目です。' },
+            agriGDP: { label: '農業生産額', unit: '百万円', cat: 'agri', icon: '💰', bestAgg: 'sum', sourceName: '経済計算', insightTitle: '農業の稼ぐ力', insightDesc: '生産額の差は、付加価値の高い作物の集積度合いを意味します。', tip1: '経営体数が少なくても生産額が高い地域は、大規模効率化が進んでいます。', tip2: '主力品目の違いが、グループ全体の収益構造の差となって現れます。' },
+            agriArea: { label: '経営耕地面積', unit: 'ha', cat: 'agri', icon: '🚜', bestAgg: 'sum', sourceName: '農林業センサス', insightTitle: '農地の活用規模', insightDesc: '耕地面積の差は、土地利用型農業の実施ポテンシャルを意味します。', tip1: '広大な面積は、将来のスマート農業導入のベースとなります。', tip2: '耕作面積の維持が、景観保全機能の維持にも直結します。' },
+            // 林業
+            forestEntities: { label: '林業経営体数', unit: '体', cat: 'forest', icon: '🌲', bestAgg: 'sum', sourceName: '農林業センサス', insightTitle: '森林管理の担い手', insightDesc: '経営体数は、森林資源を持続的に管理・活用できる体制の厚みを意味します。', tip1: '岩手は全国有数の林業県。その核となる自治体が分かります。', tip2: '小規模経営体が多い地域は、集約化による効率向上が今後の課題です。' },
+            forestWorkers: { label: '林業就業者数', unit: '人', cat: 'forest', icon: '🪓', bestAgg: 'sum', sourceName: '国勢調査', insightTitle: '森林管理労働力', insightDesc: '就業者数の差は、資源管理の実施能力を意味します。', tip1: '数値の低下は、山林の荒廃リスクを直接的に示唆します。', tip2: '就業者あたりの管理面積を割り出すことで、負担の重さが分かります。' },
+            forestGDP: { label: '林業生産額', unit: '百万円', cat: 'forest', icon: '⛰️', bestAgg: 'sum', sourceName: '経済計算', insightTitle: '森林の経済価値', insightDesc: '生産額の差は、木材出荷能力や特用林産物の振興度を反映します。', tip1: '県北・沿岸部の貢献度が、グループ合計に反映されます。', tip2: 'バイオマス利用などの新たな価値創出の基盤となります。' },
+            forestArea: { label: '林家保有山林面積', unit: 'ha', cat: 'forest', icon: '🌳', bestAgg: 'sum', sourceName: '農林業センサス', insightTitle: '森林資源のストック', insightDesc: '保有面積の差は、将来の収益ポテンシャルと吸収源としての価値を意味します。', tip1: '広大な面積は、脱炭素社会におけるJ-クレジット等の活用余地も示します。', tip2: '公有林と私有林の比率も、施策上の重要な視点です。' },
+            charcoalProd: { label: '木炭生産量', unit: 'トン', cat: 'forest', icon: '🔥', bestAgg: 'sum', sourceName: '特用林産物調査', insightTitle: '伝統産業の継承力', insightDesc: '生産量の差は、日本一のブランドを支える技能の集積を意味します。', tip1: '特定の特定圏域に集積しており、地域独自の文化を形成しています。', tip2: '燃料以外の浄化・土壌改良用途への展開も期待される分野です。' },
+            // 水産業
+            fishEntities: { label: '漁業経営体数', unit: '体', cat: 'fish', icon: '🐟', bestAgg: 'sum', sourceName: '漁業センサス', insightTitle: '浜の活力と継続性', insightDesc: '経営体数は、漁村コミュニティの維持基盤を意味します。', tip1: '沿岸部特有の指標であり、内陸グループとの明確な構造差を示します。', tip2: '担い手の減少率の差が、地域の未来像に直結します。' },
+            fishWorkers: { label: '漁業就業者数', unit: '人', cat: 'fish', icon: '🎣', bestAgg: 'sum', sourceName: '漁業センサス', insightTitle: '漁業労働力', insightDesc: '就業者数は、水揚げ能力や養殖管理のキャパシティに直結します。', tip1: '高齢化が最も顕著な分野の一つ。後継者確保の差が見えます。', tip2: '加工業への雇用波及効果の源泉となる重要な数値です。' },
+            fishGDP: { label: '水産業生産額', unit: '百万円', cat: 'fish', icon: '🌊', bestAgg: 'sum', sourceName: '経済計算', insightTitle: '海の経済スケール', insightDesc: '生産額の差は、主要魚種の好不漁や養殖の成否を意味します。', tip1: '主要港の有無が、グループ全体の数値を決定づけます。', tip2: '「獲る漁業」から「育てる漁業」への転換度合いも現れます。' },
+            // 商工業
+            totalEst: { label: '全事業所数', unit: '所', cat: 'comm', icon: '🏢', bestAgg: 'sum', sourceName: '経済センサス', insightTitle: '経済活動の多様性', insightDesc: '事業所数の差は、地域のビジネスチャンスと雇用の選択肢を意味します。', tip1: '都市部への集積度が、グループ間の数値差として如実に現れます。', tip2: '1事業所あたりの従業員数から、産業の性質を推測できます。' },
+            totalEmp: { label: '全従業者数', unit: '人', cat: 'comm', icon: '👔', bestAgg: 'sum', sourceName: '経済センサス', insightTitle: '労働市場の規模', insightDesc: '従業者数の差は、地域がどれだけの働く場を提供できているかを意味します。', tip1: '昼間人口の流入・流出の実態を反映する指標です。', tip2: '産業構造のバランスが、地域の安定性に寄与します。' },
+            retailSales: { label: '小売年間販売額', unit: '億円', cat: 'comm', icon: '🛍️', bestAgg: 'sum', sourceName: '商業統計', insightTitle: '商業の吸引力', insightDesc: '販売額の差は、買い物客をどれだけ周辺から呼び寄せているかを意味します。', tip1: '人口比で販売額が高い地域は、広域センター機能を持っています。', tip2: '消費スタイルの変化（ECvs実店舗）が数値の差に現れます。' },
+            manufShipments: { label: '製造品出荷額', unit: '億円', cat: 'comm', icon: '🏭', bestAgg: 'sum', sourceName: '工業統計', insightTitle: '稼ぐエンジンの強さ', insightDesc: '出荷額の差は、地域経済を牽引する製造業のパワーを意味します。', tip1: '北上川流域の自治体の集積が突出して現れる項目です。', tip2: '特定の大規模工場の有無が、グループ合計を大きく左右します。' },
+            // 教育
+            elemStudent: { label: '小学校児童数', unit: '人', cat: 'edu', icon: '🎒', bestAgg: 'sum', sourceName: '学校基本調査', insightTitle: '次世代のボリューム', insightDesc: '児童数の差は、将来の生産年齢人口の予備軍の多さを意味します。', tip1: '教育インフラの維持コストや、適正配置の議論の基礎となります。', tip2: '減少スピードの比較が、地域の将来像予測に不可欠です。' },
+            jhStudent: { label: '中学校生徒数', unit: '人', cat: 'edu', icon: '📝', bestAgg: 'sum', sourceName: '学校基本調査', insightTitle: '高校進学前の人口層', insightDesc: '生徒数の差は、地元の高校需要や若年層の定住基盤を意味します。', tip1: '中学卒業時の市外流出の実態を探るための基準値となります。', tip2: '部活動等のコミュニティ活動の維持能力に関わります。' },
+            // 観光
+            tourVisitors: { label: '観光客入込数', unit: '千人', cat: 'tour', icon: '🏃', bestAgg: 'sum', sourceName: '観光統計', insightTitle: '交流人口による賑わい', insightDesc: '入込数の差は、地域のブランド力と外貨獲得能力を意味します。', tip1: '有名観光地（平泉、八幡平など）の集客力が反映されます。', tip2: '「点」の観光から「面」の観光への展開を測る指標です。' },
+            // 社会動態
+            population: { label: '人口', unit: '人', cat: 'social', icon: '👨‍👩‍👧‍👦', bestAgg: 'sum', sourceName: '毎月人口推計', insightTitle: '自治体の基礎体力', insightDesc: '人口規模の差は、あらゆる公共サービス効率と市場規模を意味します。', tip1: '県全体におけるその圏域の影響力を示す絶対的な指標です。', tip2: '人口密度の差と併せて見ることで、居住効率が分かります。' },
+            income: { label: '1人当り所得', unit: '千円', cat: 'social', icon: '💰', bestAgg: 'wAvg', sourceName: '経済計算', insightTitle: '生活の豊かさ水準', insightDesc: '所得の差は、住民の購買力や生活満足度を反映する差を意味します。', tip1: '加重平均により、人口規模に左右されない実力を測れます。', tip2: '格差の把握には最大・最小値や中央値の比較も有効です。' },
+            suicide: { label: '自殺者数', unit: '人', cat: 'social', icon: '🙏', bestAgg: 'sum', sourceName: '福祉統計', insightTitle: '社会の孤立・ストレス', insightDesc: '数値の差は、地域のメンタルヘルス課題やサポート網の必要性を意味します。', tip1: '実数だけでなく、人口比での比較が分析上必須です。', tip2: '背景にある経済・家族問題への対策指標となります。' }
+        };
+
+        const CATEGORIES = {
+            lifestyle: { label: '基本情報', icon: '🗺️', color: '#64748b' },
+            agri: { label: '農業', icon: '🌾', color: '#16a34a' },
+            forest: { label: '林業', icon: '🌲', color: '#059669' },
+            fish: { label: '水産業', icon: '🐟', color: '#0891b2' },
+            comm: { label: '商工業', icon: '🏭', color: '#d97706' },
+            edu: { label: '教育', icon: '🎓', color: '#4f46e5' },
+            tour: { label: '観光', icon: '✈️', color: '#e11d48' },
+            social: { label: '社会動態', icon: '🏘️', color: '#2563eb' }
+        };
+
+        let state = {
+            selectedIdsA: [1, 14, 18], 
+            selectedIdsB: [5, 13, 21], 
+            activeEditGroup: 'A',
+            activeMetric: 'population',
+            activeCat: 'lifestyle',
+            summaryAggMode: 'sum', 
+            charts: { summary: null, A: null, B: null }
+        };
+
+        const getEl = (id) => document.getElementById(id);
+
+        function init() {
+            renderTabs();
+            renderList();
+            setActiveMetric('population');
+        }
+
+        function setEditGroup(group) {
+            state.activeEditGroup = group;
+            getEl('btn-edit-A').className = group === 'A' ? "flex-1 py-3 rounded-xl text-xs font-black transition-all group-tab-active-A" : "flex-1 py-3 rounded-xl text-xs font-black transition-all text-slate-400 hover:text-slate-600";
+            getEl('btn-edit-B').className = group === 'B' ? "flex-1 py-3 rounded-xl text-xs font-black transition-all group-tab-active-B" : "flex-1 py-3 rounded-xl text-xs font-black transition-all text-slate-400 hover:text-slate-600";
+            renderList();
+        }
+
+        function setSummaryAggMode(mode) {
+            state.summaryAggMode = mode;
+            updateAggSwitcherUI();
+            updateCharts();
+        }
+
+        function updateAggSwitcherUI() {
+            document.querySelectorAll('#summary-agg-switcher button').forEach(btn => btn.className = 'px-3 py-1.5 rounded-lg text-[10px] font-black transition-all agg-btn-inactive hover:bg-slate-200');
+            const targetBtn = getEl(`btn-sum-${state.summaryAggMode}`);
+            if (targetBtn) targetBtn.className = 'px-3 py-1.5 rounded-lg text-[10px] font-black transition-all agg-btn-active';
+        }
+
+        function setCategory(cat) {
+            state.activeCat = cat;
+            renderTabs();
+            const firstMetricKey = Object.keys(METRICS).find(m => METRICS[m].cat === cat);
+            if (firstMetricKey) setActiveMetric(firstMetricKey);
+        }
+
+        function setActiveMetric(metricKey) {
+            if (!METRICS[metricKey]) return;
+            state.activeMetric = metricKey;
+            state.summaryAggMode = METRICS[metricKey].bestAgg || 'sum';
+            renderMetrics();
+            updateUI();
+        }
+
+        function renderTabs() {
+            let html = '';
+            Object.entries(CATEGORIES).forEach(([k, v]) => {
+                const isActive = state.activeCat === k;
+                const style = `background-color: ${isActive ? v.color : 'transparent'}; color: ${isActive ? 'white' : '#64748b'}`;
+                html += `<button onclick="setCategory('${k}')" style="${style}" class="px-5 py-2 rounded-xl text-[11px] font-bold transition-all border border-transparent ${isActive ? 'shadow-md' : 'hover:bg-white'}"><span>${v.icon}</span> ${v.label}</button>`;
+            });
+            getEl('category-tabs').innerHTML = html;
+        }
+
+        function renderMetrics() {
+            let html = '';
+            const catColor = CATEGORIES[state.activeCat].color;
+            Object.entries(METRICS).filter(([_, m]) => m.cat === state.activeCat).forEach(([k, m]) => {
+                const isActive = state.activeMetric === k;
+                html += `
+                    <button onclick="setActiveMetric('${k}')" class="px-4 py-3 rounded-2xl border-2 transition-all flex items-center gap-3 relative group ${isActive ? 'metric-btn-active shadow-lg' : 'bg-white/50 border-transparent text-slate-400 hover:border-slate-200 hover:bg-white shadow-soft'}" ${isActive ? `style="border-color:${catColor};"` : ''}>
+                        <div class="text-xl shrink-0" ${isActive ? `style="color:${catColor}"` : ''}>${m.icon}</div>
+                        <span class="text-[10px] font-black text-left leading-tight ${isActive ? 'text-slate-900' : ''}">${m.label}</span>
+                    </button>`;
+            });
+            getEl('metric-grid').innerHTML = html;
+            const badge = getEl('active-metric-cat-label');
+            badge.innerText = CATEGORIES[state.activeCat].label;
+            badge.style.backgroundColor = `${catColor}15`;
+            badge.style.color = catColor;
+        }
+
+        function toggleCity(id) {
+            const listKey = state.activeEditGroup === 'A' ? 'selectedIdsA' : 'selectedIdsB';
+            const ids = state[listKey];
+            const idx = ids.indexOf(id);
+            if (idx > -1) { if (ids.length > 1) ids.splice(idx, 1); }
+            else { ids.push(id); }
+            renderList();
+            updateCharts();
+        }
+
+        function selectByRegion(region) {
+            const listKey = state.activeEditGroup === 'A' ? 'selectedIdsA' : 'selectedIdsB';
+            const regionIds = MUNICIPAL_DATA.filter(d => d.region === region).map(d => d.id);
+            const allSelected = regionIds.every(id => state[listKey].includes(id));
+            if (allSelected) state[listKey] = state[listKey].filter(id => !regionIds.includes(id));
+            else state[listKey] = [...new Set([...state[listKey], ...regionIds])];
+            if (state[listKey].length === 0) state[listKey] = [1];
+            renderList();
+            updateCharts();
+        }
+
+        function selectAll() {
+            const listKey = state.activeEditGroup === 'A' ? 'selectedIdsA' : 'selectedIdsB';
+            state[listKey] = MUNICIPAL_DATA.map(d => d.id);
+            renderList(); updateCharts();
+        }
+        function deselectAll() {
+            const listKey = state.activeEditGroup === 'A' ? 'selectedIdsA' : 'selectedIdsB';
+            state[listKey] = [1];
+            renderList(); updateCharts();
+        }
+
+        function renderList() {
+            let html = '';
+            MUNICIPAL_DATA.forEach(d => {
+                const inA = state.selectedIdsA.includes(d.id);
+                const inB = state.selectedIdsB.includes(d.id);
+                let btnClass = "bg-slate-50 border border-slate-100 text-slate-600 hover:border-blue-200 shadow-sm";
+                if (inA && inB) btnClass = "both-selected";
+                else if (inA) btnClass = "bg-blue-600 text-white border-none shadow-md";
+                else if (inB) btnClass = "bg-indigo-900 text-white border-none shadow-md";
+                html += `
+                    <button onclick="toggleCity(${d.id})" class="text-left px-3 py-2.5 rounded-xl text-[9px] font-black transition-all flex items-center justify-between group ${btnClass}">
+                        <span class="truncate">${d.name} (${d.region.substring(0, 2)})</span>
+                        ${(inA || inB) ? '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+                    </button>`;
+            });
+            getEl('city-list').innerHTML = html;
+            const currentList = state.activeEditGroup === 'A' ? state.selectedIdsA : state.selectedIdsB;
+            getEl('selection-count').innerText = `${state.activeEditGroup} 編集・選択中 (${currentList.length})`;
+        }
+
+        function updateUI() {
+            const m = METRICS[state.activeMetric];
+            if(!m) return;
+            getEl('active-metric-title').innerText = m.label;
+            getEl('active-metric-info').innerText = `単位: ${m.unit || '指数'} | グループ比較`;
+            getEl('metric-source-name').innerText = m.sourceName;
+            getEl('metric-insight-title').innerText = m.insightTitle;
+            getEl('metric-insight-desc').innerText = m.insightDesc;
+            getEl('metric-insight-tip1').innerText = m.tip1;
+            getEl('metric-insight-tip2').innerText = m.tip2;
+            updateAggSwitcherUI();
+            updateCharts();
+        }
+
+        function calculateGroupStats(ids, metric) {
+            const members = MUNICIPAL_DATA.filter(d => ids.includes(d.id));
+            const vals = members.map(d => d[metric] || 0);
+            const popTotal = members.reduce((acc, c) => acc + c.population, 0);
+            const sum = members.reduce((acc, c) => acc + (c[metric] || 0), 0);
+            const avg = sum / (members.length || 1);
+            const wAvg = members.reduce((acc, c) => acc + ((c[metric]||0) * c.population), 0) / (popTotal || 1);
+            const max = Math.max(...vals, 0);
+            const min = Math.min(...vals, 0);
+            const sorted = [...vals].sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            const median = sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+            return { sum, avg, wAvg, max, min, median, vals };
+        }
+
+        function updateCharts() {
+            const metric = state.activeMetric;
+            const unit = METRICS[metric].unit;
+            const statsA = calculateGroupStats(state.selectedIdsA, metric);
+            const statsB = calculateGroupStats(state.selectedIdsB, metric);
+            const combinedMax = Math.max(...statsA.vals, ...statsB.vals) * 1.1;
+
+            const ctxSummary = getEl('chartSummary').getContext('2d');
+            let valA = 0, valB = 0;
+            const mode = state.summaryAggMode;
+            if(mode === 'sum') { valA = statsA.sum; valB = statsB.sum; }
+            else if(mode === 'avg') { valA = statsA.avg; valB = statsB.avg; }
+            else if(mode === 'wAvg') { valA = statsA.wAvg; valB = statsB.wAvg; }
+            else if(mode === 'median') { valA = statsA.median; valB = statsB.median; }
+            else if(mode === 'max') { valA = statsA.max; valB = statsB.max; }
+            else if(mode === 'min') { valA = statsA.min; valB = statsB.min; }
+
+            if (state.charts.summary) state.charts.summary.destroy();
+            state.charts.summary = new Chart(ctxSummary, {
+                type: 'bar',
+                data: {
+                    labels: ['集計結果'],
+                    datasets: [
+                        { label: 'グループA', data: [valA], backgroundColor: '#2563eb', borderRadius: 12, barPercentage: 0.4 },
+                        { label: 'グループB', data: [valB], backgroundColor: '#312e81', borderRadius: 12, barPercentage: 0.4 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${c.raw.toLocaleString()}${unit}` } } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { weight: 'black' } } },
+                        y: { grid: { color: '#e2e8f0', drawBorder: false }, ticks: { font: { weight: 'bold' } } }
+                    }
+                }
+            });
+
+            const renderDetailChart = (id, ids, color) => {
+                const ctx = getEl(id).getContext('2d');
+                const data = MUNICIPAL_DATA.filter(d => ids.includes(d.id)).sort((a,b) => (b[metric]||0)-(a[metric]||0));
+                const labels = data.map(d => `${d.name} (${d.region.substring(0, 2)})`);
+                const values = data.map(d => d[metric] || 0);
+                if (state.charts[id]) state.charts[id].destroy();
+                state.charts[id] = new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels, datasets: [{ data: values, backgroundColor: color, borderRadius: 6, barPercentage: 0.6 }] },
+                    options: {
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { max: combinedMax, grid: { display: false }, ticks: { font: { size: 9 } } },
+                            y: { grid: { display: false }, ticks: { font: { weight: 'bold', size: 10 } } }
+                        }
+                    }
+                });
+            };
+            renderDetailChart('chartA', state.selectedIdsA, '#2563eb');
+            renderDetailChart('chartB', state.selectedIdsB, '#312e81');
+        }
+
+        window.onload = function() {
+            init();
+        };
+    </script>
+</body>
+</html>
